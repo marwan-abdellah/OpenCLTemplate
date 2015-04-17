@@ -105,19 +105,6 @@ Image RGBAtoRGB (const Image& input)
     return result;
 }
 
-cl_program CreateProgram (const std::string& source,
-                          cl_context context)
-{
-    // http://www.khronos.org/registry/cl/sdk/1.1/docs/man/xhtml/clCreateProgramWithSource.html
-    size_t lengths [1] = { source.size () };
-    const char* sources [1] = { source.data () };
-
-    cl_int error = 0;
-    cl_program program = clCreateProgramWithSource (context, 1, sources, lengths, &error);
-    clCheckError( error );
-
-    return program;
-}
 
 int main (int argc, char** argv)
 {
@@ -161,17 +148,16 @@ int main (int argc, char** argv)
         filter [i] /= 16.0f;
     }
 
-    // Create a program from source
-    std::cout << "Creating a program from source" << std::endl;
-    cl_program program = CreateProgram (clKernels::loadKernel("kernels/image.cl"),
-                                        context);
+    // Load a kernel source from the file
+    std::string kernelSource = clKernels::loadKernel("kernels/image.cl");
 
-    clCheckError (clBuildProgram (program, ex_hardwareInfo->getDeviceCount (), ex_hardwareInfo->getDeviceIds (),
-                                  "-D FILTER_SIZE=1", nullptr, nullptr));
+    // Create a program from source and compile it
+    cl_program program = clKernels::createProgramFromKernelSource
+            (kernelSource, context, ex_hardwareInfo->getDeviceIds(),
+             ex_hardwareInfo->getDeviceCount());
 
-    // http://www.khronos.org/registry/cl/sdk/1.1/docs/man/xhtml/clCreateKernel.html
-    cl_kernel kernel = clCreateKernel (program, "Filter", &error);
-    clCheckError (error);
+    // Compiling the kernel for a specific function from the loaded program
+    cl_kernel kernel = clKernels::createKernelFromProgram(program, "Filter");
 
     // OpenCL only supports RGBA, so we need to convert here
     const auto image = RGBtoRGBA (LoadImage ("test.ppm"));
