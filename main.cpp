@@ -12,13 +12,13 @@
 
 ApplicationData* appData;
 
-struct Image
+struct MyImage
 {
     std::vector<char> pixel;
     int width, height;
 };
 
-Image LoadImage (const char* path)
+MyImage LoadImage (const char* path)
 {
     std::ifstream in (path, std::ios::binary);
 
@@ -60,11 +60,11 @@ Image LoadImage (const char* path)
     std::vector<char> data (width * height * 3);
     in.read (reinterpret_cast<char*> (data.data ()), data.size ());
 
-    const Image img = { data, width, height };
+    const MyImage img = { data, width, height };
     return img;
 }
 
-void SaveImage (const Image& img, const char* path)
+void SaveImage (const MyImage& img, const char* path)
 {
     std::ofstream out (path, std::ios::binary);
 
@@ -74,9 +74,9 @@ void SaveImage (const Image& img, const char* path)
     out.write (img.pixel.data (), img.pixel.size ());
 }
 
-Image RGBtoRGBA (const Image& input)
+MyImage RGBtoRGBA (const MyImage& input)
 {
-    Image result;
+    MyImage result;
     result.width = input.width;
     result.height = input.height;
 
@@ -90,9 +90,9 @@ Image RGBtoRGBA (const Image& input)
     return result;
 }
 
-Image RGBAtoRGB (const Image& input)
+MyImage RGBAtoRGB (const MyImage& input)
 {
-    Image result;
+    MyImage result;
     result.width = input.width;
     result.height = input.height;
 
@@ -204,7 +204,7 @@ int main (int argc, char** argv)
     clCheckError (errno);
 
     // Prepare the result image, set to black
-    Image result = image;
+    MyImage result = image;
     std::fill(result.pixel.begin (), result.pixel.end (), 0);
 
     // Get the result back to the host

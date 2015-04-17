@@ -1,33 +1,34 @@
-#ifndef RGBIMAGE_H
-#define RGBIMAGE_H
+#ifndef IMAGE_H
+#define IMAGE_H
 
 #include "clHeaders.h"
 #include <string>
 #include <fstream>
 #include <sstream>
 
-class RGBImage
+class Image
 {
 public:
     /**
-     * @brief RGBImage
+     * @brief Image
      * Load an image from file, and create it.
      * @param fileName
      */
-    RGBImage(const std::string fileName);
+    Image(const std::string fileName);
 
     /**
-     * @brief RGBImage
-     * Create an image with specific dimensions.
+     * @brief Image
      * @param width
      * @param height
+     * @param colorDepth
+     * @param components
      * @param name
      */
-    RGBImage(const uint32_t width,
-             const uint32_t height,
-             const std::string name);
+    Image(const uint32_t width, const uint32_t height,
+          const uint32_t colorDepth, const uint32_t components,
+          const std::string name);
 
-    ~RGBImage();
+    ~Image();
 
     /**
      * @brief getWidth
@@ -48,6 +49,12 @@ public:
     uint32_t getColorDepth(void) const;
 
     /**
+     * @brief getNumberOfColorComponents
+     * @return
+     */
+    uint32_t getNumberOfColorComponents(void) const;
+
+    /**
      * @brief getNumberOfPixels
      * @return
      */
@@ -65,6 +72,12 @@ public:
      */
     char* getPixels(void) const;
 
+    /**
+     * @brief getDataSizeInBytes
+     * @return
+     */
+    uint32_t getDataSizeInBytes(void) const;
+
 private:
 
     /** @brief Image width in pixels */
@@ -76,6 +89,9 @@ private:
     /** @brief Color depth (number of bits per pixel) */
     uint32_t _colorDepth;
 
+    /** @brief Number of color components per pixel */
+    uint32_t _numComponents;
+
     /** @brief Number of pixels in the image */
     uint32_t _numPixels;
 
@@ -85,18 +101,16 @@ private:
     /** @brief Image data */
     char* _pixels;
 
+    /** @brief The size of the image data */
+    uint32_t _dataSize;
+
 private:
 
     /**
-     * @brief _allocateImage
-     */
-    void _allocateImage(void);
-
-    /**
-     * @brief _loadImage
+     * @brief _loadPPMImage
      * @param fileName
      */
-    void _loadImage(const std::string fileName);
+    void _loadPPMImage(const std::string fileName);
 };
 
-#endif // RGBIMAGE_H
+#endif // IMAGE_H

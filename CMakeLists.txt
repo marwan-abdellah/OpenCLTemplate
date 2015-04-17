@@ -12,7 +12,7 @@ SET(SRC_FILES
     ApplicationData.cpp
     Logger.cpp
     clHardware.cpp
-    RGBImage.cpp
+    Image.cpp
     clKernels.cpp
 )
 
@@ -27,7 +27,7 @@ SET(HDR_FILES
     clHardware.h
     clPlatform.hpp
     clDevice.hpp
-    RGBImage.h
+    Image.h
     clKernels.h
 )
 
