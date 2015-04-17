@@ -159,65 +159,67 @@ int main (int argc, char** argv)
     // Compiling the kernel for a specific function from the loaded program
     cl_kernel kernel = clKernels::createKernelFromProgram(program, "Filter");
 
+
     // OpenCL only supports RGBA, so we need to convert here
     const auto image = RGBtoRGBA (LoadImage ("test.ppm"));
 
-    // http://www.khronos.org/registry/cl/sdk/1.1/docs/man/xhtml/clCreateImage2D.html
+
+
+    // Image format
     static const cl_image_format format = { CL_RGBA, CL_UNORM_INT8 };
-    cl_mem inputImage = clCreateImage2D (context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, &format,
-                                         image.width, image.height, 0,
-                                         // This is a bug in the spec
-                                         const_cast<char*> (image.pixel.data ()),
-                                         &error);
+
+    // Create a 2D image on the device
+    cl_mem inputImage = clCreateImage2D
+            (context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, &format,
+             image.width, image.height, 0, // This is a bug in the spec
+             const_cast<char*> (image.pixel.data ()), &error);
     clCheckError (error);
 
-    cl_mem outputImage = clCreateImage2D (context, CL_MEM_WRITE_ONLY, &format,
-                                          image.width, image.height, 0,
-                                          nullptr, &error);
+    cl_mem outputImage = clCreateImage2D
+            (context, CL_MEM_WRITE_ONLY, &format, image.width, image.height, 0,
+             NULL, &error);
     clCheckError (error);
 
     // Create a buffer for the filter weights
-    // http://www.khronos.org/registry/cl/sdk/1.1/docs/man/xhtml/clCreateBuffer.html
-    cl_mem filterWeightsBuffer = clCreateBuffer (context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                                                 sizeof (float) * 9, filter, &error);
+    cl_mem filterWeightsBuffer = clCreateBuffer
+            (context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+             sizeof (float) * 9, filter, &error);
     clCheckError (error);
 
     // Setup the kernel arguments
-    clSetKernelArg (kernel, 0, sizeof (cl_mem), &inputImage);
-    clSetKernelArg (kernel, 1, sizeof (cl_mem), &filterWeightsBuffer);
-    clSetKernelArg (kernel, 2, sizeof (cl_mem), &outputImage);
+    clSetKernelArg(kernel, 0, sizeof (cl_mem), &inputImage);
+    clSetKernelArg(kernel, 1, sizeof (cl_mem), &filterWeightsBuffer);
+    clSetKernelArg(kernel, 2, sizeof (cl_mem), &outputImage);
 
-    // http://www.khronos.org/registry/cl/sdk/1.1/docs/man/xhtml/clCreateCommandQueue.html
-    cl_command_queue queue = clCreateCommandQueue (context, ex_hardwareInfo->getDeviceIds ()[0],
-            0, &error);
+    // Create the command queue
+    cl_command_queue queue = clCreateCommandQueue
+            (context, ex_hardwareInfo->getDeviceIds()[0], 0, &error);
     clCheckError (error);
 
     // Run the processing
-    // http://www.khronos.org/registry/cl/sdk/1.1/docs/man/xhtml/clEnqueueNDRangeKernel.html
     std::size_t offset [3] = { 0 };
     std::size_t size [3] = { image.width, image.height, 1 };
-    clCheckError (clEnqueueNDRangeKernel (queue, kernel, 2, offset, size, nullptr,
-                                          0, nullptr, nullptr));
+    error = clEnqueueNDRangeKernel(queue, kernel, 2, offset, size, NULL,
+                                   0, NULL, NULL);
+    clCheckError (errno);
 
     // Prepare the result image, set to black
     Image result = image;
-    std::fill (result.pixel.begin (), result.pixel.end (), 0);
+    std::fill(result.pixel.begin (), result.pixel.end (), 0);
 
     // Get the result back to the host
     std::size_t origin [3] = { 0 };
     std::size_t region [3] = { result.width, result.height, 1 };
     clEnqueueReadImage (queue, outputImage, CL_TRUE,
                         origin, region, 0, 0,
-                        result.pixel.data (), 0, nullptr, nullptr);
+                        result.pixel.data (), 0, NULL, NULL);
 
     SaveImage (RGBAtoRGB (result), "output.ppm");
 
     clReleaseMemObject (outputImage);
     clReleaseMemObject (filterWeightsBuffer);
     clReleaseMemObject (inputImage);
-
     clReleaseCommandQueue (queue);
-
     clReleaseKernel (kernel);
     clReleaseProgram (program);
 
