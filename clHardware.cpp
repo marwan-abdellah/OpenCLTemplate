@@ -13,6 +13,7 @@ clHardware::clHardware() { }
 void clHardware::scanHardware()
 {
     BEGIN();
+    LOG_INFO("Scanning the hardware for OpenCL-capable devices");
 
     // Get the number of supported platforms in the system
     clGetPlatformIDs( 0, NULL, &_platformCount );

@@ -8,6 +8,7 @@
 #include "clUtilities.h"
 #include "ApplicationData.h"
 #include "Externs.hpp"
+#include "clKernels.h"
 
 ApplicationData* appData;
 
@@ -104,15 +105,6 @@ Image RGBAtoRGB (const Image& input)
     return result;
 }
 
-std::string LoadKernel (const char* name)
-{
-    std::ifstream in (name);
-    std::string result (
-                (std::istreambuf_iterator<char> (in)),
-                std::istreambuf_iterator<char> ());
-    return result;
-}
-
 cl_program CreateProgram (const std::string& source,
                           cl_context context)
 {
@@ -140,50 +132,11 @@ int main (int argc, char** argv)
     ex_hardwareInfo->scanHardware ();
 
 
-
-    //    // http://www.khronos.org/registry/cl/sdk/1.1/docs/man/xhtml/clGetPlatformIDs.html
-    //    cl_uint platformIdCount = 0;
-    //	clGetPlatformIDs (0, nullptr, &platformIdCount);
-
-    //	if (platformIdCount == 0) {
-    //		std::cerr << "No OpenCL platform found" << std::endl;
-    //		return 1;
-    //	} else {
-    //		std::cout << "Found " << platformIdCount << " platform(s)" << std::endl;
-    //	}
-
-    //	std::vector<cl_platform_id> platformIds (platformIdCount);
-    //	clGetPlatformIDs (platformIdCount, platformIds.data (), nullptr);
-
-    //	for (cl_uint i = 0; i < platformIdCount; ++i) {
-    //        std::cout << "\t (" << (i+1) << ") : " << clGetPlatformName(platformIds [i]) << std::endl;
-    //	}
-
-    //    // http://www.khronos.org/registry/cl/sdk/1.1/docs/man/xhtml/clGetDeviceIDs.html
-    //    cl_uint deviceIdCount = 0;
-    //	clGetDeviceIDs (platformIds [0], CL_DEVICE_TYPE_ALL, 0, nullptr,
-    //		&deviceIdCount);
-
-    //	if (deviceIdCount == 0) {
-    //		std::cerr << "No OpenCL devices found" << std::endl;
-    //		return 1;
-    //	} else {
-    //		std::cout << "Found " << deviceIdCount << " device(s)" << std::endl;
-    //	}
-
-    //	std::vector<cl_device_id> deviceIds (deviceIdCount);
-    //	clGetDeviceIDs (platformIds [0], CL_DEVICE_TYPE_ALL, deviceIdCount,
-    //		deviceIds.data (), nullptr);
-
-    //	for (cl_uint i = 0; i < deviceIdCount; ++i) {
-    //        std::cout << "\t (" << (i+1) << ") : " << clGetDeviceName(deviceIds [i]) << std::endl;
-    //	}
-
-
-    // http://www.khronos.org/registry/cl/sdk/1.1/docs/man/xhtml/clCreateContext.html
     const cl_context_properties contextProperties [] =
     {
-        CL_CONTEXT_PLATFORM, reinterpret_cast<cl_context_properties> (ex_hardwareInfo->getPlatformIds()[0]),
+        CL_CONTEXT_PLATFORM,
+        reinterpret_cast<cl_context_properties>
+        (ex_hardwareInfo->getPlatformIds()[0]),
         0, 0
     };
 
@@ -192,7 +145,9 @@ int main (int argc, char** argv)
                                           ex_hardwareInfo->getDeviceIds(), NULL, NULL, &error);
     clCheckError (error);
 
-    std::cout << "Context created" << std::endl;
+
+
+
 
     // Simple Gaussian blur filter
     float filter [] = {
@@ -208,7 +163,7 @@ int main (int argc, char** argv)
 
     // Create a program from source
     std::cout << "Creating a program from source" << std::endl;
-    cl_program program = CreateProgram (LoadKernel ("kernels/image.cl"),
+    cl_program program = CreateProgram (clKernels::loadKernel("kernels/image.cl"),
                                         context);
 
     clCheckError (clBuildProgram (program, ex_hardwareInfo->getDeviceCount (), ex_hardwareInfo->getDeviceIds (),
