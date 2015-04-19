@@ -5,6 +5,7 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include <vector>
 
 class Image
 {
@@ -24,8 +25,8 @@ public:
      * @param components
      * @param name
      */
-    Image(const uint32_t width, const uint32_t height,
-          const uint32_t colorDepth, const uint32_t components,
+    Image(const int width, const int height,
+          const int colorDepth, const int components,
           const std::string name);
 
     ~Image();
@@ -34,31 +35,31 @@ public:
      * @brief getWidth
      * @return
      */
-    uint32_t getWidth(void) const;
+    int getWidth(void) const;
 
     /**
      * @brief getHeight
      * @return
      */
-    uint32_t getHeight(void) const;
+    int getHeight(void) const;
 
     /**
      * @brief getColorDepth
      * @return
      */
-    uint32_t getColorDepth(void) const;
+    int getColorDepth(void) const;
 
     /**
      * @brief getNumberOfColorComponents
      * @return
      */
-    uint32_t getNumberOfColorComponents(void) const;
+    int getNumberOfColorComponents(void) const;
 
     /**
      * @brief getNumberOfPixels
      * @return
      */
-    uint32_t getNumberOfPixels(void) const;
+    int getNumberOfPixels(void) const;
 
     /**
      * @brief getName
@@ -70,39 +71,54 @@ public:
      * @brief getPixels
      * @return
      */
-    char* getPixels(void) const;
+    std::vector<char>* getPixels(void);
 
     /**
      * @brief getDataSizeInBytes
      * @return
      */
-    uint32_t getDataSizeInBytes(void) const;
+    int getDataSizeInBytes(void) const;
+
+    /**
+     * @brief savePPMImage
+     * @param path
+     */
+    void savePPMImage(std::string path);
+
+    /**
+     * @brief getPixelArraySize
+     * @return
+     */
+    int getPixelArraySize(void) const;
 
 private:
 
     /** @brief Image width in pixels */
-    uint32_t _width;
+    int _width;
 
     /** @brief Image height in pixels */
-    uint32_t _height;
+    int _height;
 
     /** @brief Color depth (number of bits per pixel) */
-    uint32_t _colorDepth;
+    int _colorDepth;
 
     /** @brief Number of color components per pixel */
-    uint32_t _numComponents;
+    int _numComponents;
 
     /** @brief Number of pixels in the image */
-    uint32_t _numPixels;
+    int _numPixels;
 
     /** @brief Image name */
     std::string _name;
 
     /** @brief Image data */
-    char* _pixels;
+    std::vector<char> _pixels;
 
     /** @brief The size of the image data */
-    uint32_t _dataSize;
+    int _dataSize;
+
+    /** @brief The size of array that contains all the pixel info. */
+    int _pixelArraySize;
 
 private:
 
@@ -111,6 +127,11 @@ private:
      * @param fileName
      */
     void _loadPPMImage(const std::string fileName);
+
+    /**
+     * @brief _printImageDetails
+     */
+    void _printImageDetails(void);
 };
 
 #endif // IMAGE_H

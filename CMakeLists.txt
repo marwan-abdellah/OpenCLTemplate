@@ -14,6 +14,7 @@ SET(SRC_FILES
     clHardware.cpp
     Image.cpp
     clKernels.cpp
+    ImageUtilities.cpp
 )
 
 SET(HDR_FILES
@@ -29,6 +30,7 @@ SET(HDR_FILES
     clDevice.hpp
     Image.h
     clKernels.h
+    ImageUtilities.h
 )
 
 SET(ENTRY_FILE main.cpp)

@@ -1,5 +1,6 @@
 #include "clUtilities.h"
 #include "Externs.hpp"
+#include "ColorDefines.h"
 #include <iostream>
 
 
@@ -71,18 +72,32 @@ std::string clUtilities::getDeviceName( cl_device_id platformId )
  * @brief clUtilities::checkError
  * @param errorId
  */
-void clUtilities::checkError( cl_int errorId )
+void clUtilities::checkError( const std::string FILE_NAME,
+                              const int LINE,
+                              const std::string FUNCTION,
+                              cl_int errorId )
 {
     LOG_DEBUG_VERBOSE( "checkError" );
 
-    if (errorId != CL_SUCCESS) {
-        std::cerr << "OpenCL call failed with an error " << errorId
-                  << std::endl;
-        std::exit (1);
+    if (errorId != CL_SUCCESS)
+    {
+        printf( STD_RED "[%d]" STD_RESET                        // Process Id
+                STD_CYAN " %s :" STD_RESET                      // File name
+                STD_GREEN "[%d]\n" STD_RESET                    // Code line
+                STD_MAGENTA "\t* %s" STD_RESET                  // Function name
+                STD_BOLDRED " OpenCL Error [%d] \n" STD_RESET,  // Message
+                (int) getpid(),                                 // Process Id
+                FILE_NAME.c_str(),                              // File name
+                LINE,                                           // Code line
+                FUNCTION.c_str(),                               // Error Id
+                errorId );
+
+        LOG_ERROR("OpenCL Error");
     }
 
     LOG_DEBUG_VERBOSE_OK( "checkError" );
 }
+
 
 
 clUtilities::~clUtilities()

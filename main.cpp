@@ -9,105 +9,21 @@
 #include "ApplicationData.h"
 #include "Externs.hpp"
 #include "clKernels.h"
+#include "Image.h"
+#include "ImageUtilities.h"
 
 ApplicationData* appData;
 
-struct MyImage
+/**
+ * @brief runApplication
+ * Run the OpenCL application.
+ * @param argc Argument count
+ * @param argv Argument list
+ * @return
+ */
+int runApplication (int argc, char** argv)
 {
-    std::vector<char> pixel;
-    int width, height;
-};
 
-MyImage LoadImage (const char* path)
-{
-    std::ifstream in (path, std::ios::binary);
-
-    std::string s;
-    in >> s;
-
-    if (s != "P6") {
-        exit (1);
-    }
-
-    // Skip comments
-    for (;;) {
-        getline (in, s);
-
-        if (s.empty ()) {
-            continue;
-        }
-
-        if (s [0] != '#') {
-            break;
-        }
-    }
-
-    std::stringstream str (s);
-    int width, height, maxColor;
-    str >> width >> height;
-    in >> maxColor;
-
-    if (maxColor != 255) {
-        exit (1);
-    }
-
-    {
-        // Skip until end of line
-        std::string tmp;
-        getline(in, tmp);
-    }
-
-    std::vector<char> data (width * height * 3);
-    in.read (reinterpret_cast<char*> (data.data ()), data.size ());
-
-    const MyImage img = { data, width, height };
-    return img;
-}
-
-void SaveImage (const MyImage& img, const char* path)
-{
-    std::ofstream out (path, std::ios::binary);
-
-    out << "P6\n";
-    out << img.width << " " << img.height << "\n";
-    out << "255\n";
-    out.write (img.pixel.data (), img.pixel.size ());
-}
-
-MyImage RGBtoRGBA (const MyImage& input)
-{
-    MyImage result;
-    result.width = input.width;
-    result.height = input.height;
-
-    for (std::size_t i = 0; i < input.pixel.size (); i += 3) {
-        result.pixel.push_back (input.pixel [i + 0]);
-        result.pixel.push_back (input.pixel [i + 1]);
-        result.pixel.push_back (input.pixel [i + 2]);
-        result.pixel.push_back (0);
-    }
-
-    return result;
-}
-
-MyImage RGBAtoRGB (const MyImage& input)
-{
-    MyImage result;
-    result.width = input.width;
-    result.height = input.height;
-
-    for (std::size_t i = 0; i < input.pixel.size (); i += 4) {
-        result.pixel.push_back (input.pixel [i + 0]);
-        result.pixel.push_back (input.pixel [i + 1]);
-        result.pixel.push_back (input.pixel [i + 2]);
-    }
-
-    return result;
-}
-
-
-int main (int argc, char** argv)
-{
     // Create the application data object that contains all the info. of the
     // application
     appData = new ApplicationData(argc, argv);
@@ -128,13 +44,11 @@ int main (int argc, char** argv)
     };
 
     cl_int error = CL_SUCCESS;
-    cl_context context = clCreateContext (contextProperties, ex_hardwareInfo->getDeviceCount (),
-                                          ex_hardwareInfo->getDeviceIds(), NULL, NULL, &error);
+    cl_context context = clCreateContext(contextProperties,
+                                         ex_hardwareInfo->getDeviceCount (),
+                                         ex_hardwareInfo->getDeviceIds(),
+                                         NULL, NULL, &error);
     clCheckError (error);
-
-
-
-
 
     // Simple Gaussian blur filter
     float filter [] = {
@@ -159,24 +73,28 @@ int main (int argc, char** argv)
     // Compiling the kernel for a specific function from the loaded program
     cl_kernel kernel = clKernels::createKernelFromProgram(program, "Filter");
 
+    Image* inImage = new Image("test.ppm");
+    Image* image = ImageUtilities::convertRGBtoRGBA(inImage);
 
-    // OpenCL only supports RGBA, so we need to convert here
-    const auto image = RGBtoRGBA (LoadImage ("test.ppm"));
-
-
+    LOG_INFO("Setting the image format");
 
     // Image format
     static const cl_image_format format = { CL_RGBA, CL_UNORM_INT8 };
 
-    // Create a 2D image on the device
+    LOG_INFO("Allocating the input image on the device");
     cl_mem inputImage = clCreateImage2D
             (context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, &format,
-             image.width, image.height, 0, // This is a bug in the spec
-             const_cast<char*> (image.pixel.data ()), &error);
-    clCheckError (error);
+             image->getWidth(),
+              image->getHeight(),
+             0, // This is a bug in the spec
+             const_cast<char*>(image->getPixels()->data()),
+             &error);
+    clCheckError(error);
 
+    LOG_INFO("Allocating the output image on the device");
     cl_mem outputImage = clCreateImage2D
-            (context, CL_MEM_WRITE_ONLY, &format, image.width, image.height, 0,
+            (context, CL_MEM_WRITE_ONLY, &format,
+             image->getWidth(), image->getHeight(), 0,
              NULL, &error);
     clCheckError (error);
 
@@ -198,23 +116,33 @@ int main (int argc, char** argv)
 
     // Run the processing
     std::size_t offset [3] = { 0 };
-    std::size_t size [3] = { image.width, image.height, 1 };
+    std::size_t size [3] = { image->getWidth(), image->getHeight(), 1 };
+    printf("%d %d \n", image->getWidth(), image->getHeight());
     error = clEnqueueNDRangeKernel(queue, kernel, 2, offset, size, NULL,
                                    0, NULL, NULL);
-    clCheckError (errno);
+    clCheckError (error);
 
     // Prepare the result image, set to black
-    MyImage result = image;
-    std::fill(result.pixel.begin (), result.pixel.end (), 0);
+    Image* result = new Image(image->getWidth(),
+                              image->getHeight(),
+                              image->getColorDepth(),
+                              image->getNumberOfColorComponents(),
+                              image->getName());
+    std::vector<char>* resultData = result->getPixels();
+    std::fill(resultData->begin(), resultData->end(), 0);
 
     // Get the result back to the host
     std::size_t origin [3] = { 0 };
-    std::size_t region [3] = { result.width, result.height, 1 };
+    std::size_t region [3] = { result->getWidth(), result->getHeight(), 1 };
     clEnqueueReadImage (queue, outputImage, CL_TRUE,
                         origin, region, 0, 0,
-                        result.pixel.data (), 0, NULL, NULL);
+                        result->getPixels()->data(), 0, NULL, NULL);
 
-    SaveImage (RGBAtoRGB (result), "output.ppm");
+    Image* converted = ImageUtilities::convertRGBAtoRGB(result);
+    converted->savePPMImage("Output.ppm");
+    inImage->savePPMImage("InputImage.ppm");
+
+    ImageUtilities::convertRGBAtoRGB(ImageUtilities::convertRGBtoRGBA(inImage))->savePPMImage("Check.ppm");
 
     clReleaseMemObject (outputImage);
     clReleaseMemObject (filterWeightsBuffer);
@@ -225,3 +153,12 @@ int main (int argc, char** argv)
 
     clReleaseContext (context);
 }
+
+/**
+ * @brief main
+ * Application entry point.
+ * @param argc Argument count
+ * @param argv Argument list
+ * @return
+ */
+int main(int argc, char** argv) { return runApplication(argc, argv); }

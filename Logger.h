@@ -185,7 +185,7 @@ Logger* GetApplicationLogger(void);
 
 
 #define LOG_EXIT()                                                              \
-    std::cout << "Exitting";                                                    \
+    std::cout << "Exitting ... " << std::endl;                                                    \
     exit(0);
 
 #endif

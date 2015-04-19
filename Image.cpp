@@ -9,10 +9,10 @@
  * @param components
  * @param name
  */
-Image::Image(const uint32_t width,
-             const uint32_t height,
-             const uint32_t colorDepth,
-             const uint32_t components,
+Image::Image(const int width,
+             const int height,
+             const int colorDepth,
+             const int components,
              const std::string name) :
     _width(width),
     _height(height),
@@ -21,7 +21,11 @@ Image::Image(const uint32_t width,
     _name(name)
 {
     _numPixels = _width * _height;
-    _dataSize = _numPixels * _numComponents;
+    _pixelArraySize = _numPixels * _numComponents;
+    _dataSize = _pixelArraySize * sizeof(char);
+    _pixels.resize(_dataSize);
+
+    _printImageDetails();
 }
 
 Image::Image(const std::string fileName)
@@ -71,11 +75,15 @@ void Image::_loadPPMImage(const std::string fileName)
 
     // PPM image has always 3 components
     _numComponents = 3;
-    _dataSize = _width * _height * _numComponents;
+    _numPixels = _width * _height;
+    _pixelArraySize = _numPixels * _numComponents;
+    _dataSize = _pixelArraySize * sizeof(char);
 
-    // Allocate an array and fill it with the data from the stream
-    _pixels = new char[_dataSize];
-    stream.read(_pixels, _dataSize);
+    _pixels.resize(_dataSize);
+    stream.read(reinterpret_cast<char*> (_pixels.data()), _dataSize);
+
+    // Print image details
+    _printImageDetails();
 
     END();
 }
@@ -84,28 +92,28 @@ void Image::_loadPPMImage(const std::string fileName)
  * @brief RGBImage::getWidth
  * @return
  */
-uint32_t Image::getWidth( void ) const { return _width; }
+int Image::getWidth( void ) const { return _width; }
 
 
 /**
  * @brief Image::getHeight
  * @return
  */
-uint32_t Image::getHeight( void ) const { return _height; }
+int Image::getHeight( void ) const { return _height; }
 
 
 /**
  * @brief RGBImage::getColorDepth
  * @return
  */
-uint32_t Image::getColorDepth(void) const { return _colorDepth; }
+int Image::getColorDepth(void) const { return _colorDepth; }
 
 
 /**
  * @brief RGBImage::getNumberOfColorComponents
  * @return
  */
-uint32_t Image::getNumberOfColorComponents(void) const
+int Image::getNumberOfColorComponents(void) const
 {
     return _numComponents;
 }
@@ -114,7 +122,7 @@ uint32_t Image::getNumberOfColorComponents(void) const
  * @brief RGBImage::getNumberOfPixels
  * @return
  */
-uint32_t Image::getNumberOfPixels( void ) const { return _numPixels; }
+int Image::getNumberOfPixels( void ) const { return _numPixels; }
 
 
 /**
@@ -128,25 +136,73 @@ std::string Image::getName( void ) const { return _name; }
  * @brief RGBImage::getPixels
  * @return
  */
-char* Image::getPixels( void ) const { return _pixels; }
+std::vector<char> *Image::getPixels( void )
+{
+    std::vector<char>* ptrPixels = &_pixels;
+    return ptrPixels;
+}
 
 
 /**
  * @brief Image::getDataSizeInBytes
  * @return
  */
-uint32_t Image::getDataSizeInBytes(void) const { return _dataSize; }
+int Image::getDataSizeInBytes(void) const { return _dataSize; }
 
+
+/**
+ * @brief Image::savePPMImage
+ * @param path
+ */
+void Image::savePPMImage(std::string path)
+{
+    BEGIN();
+    LOG_INFO_ARGS("Saving the image to [%s]", path.c_str());
+
+    std::ofstream stream(path, std::ios::binary);
+
+    stream << "P6\n";
+    stream << _width << " " << _height << std::endl;
+    stream << _colorDepth << std::endl;
+
+    LOG_INFO("Writing the image to disk");
+    stream.write(_pixels.data(), _dataSize);
+
+    END();
+}
+
+
+/**
+ * @brief Image::_printImageDetails
+ */
+void Image::_printImageDetails(void)
+{
+    BEGIN();
+
+    std::stringstream stream;
+    stream << std::endl;
+    stream << "\t Name: " << _name << std::endl;
+    stream << "\t Width x Height: " << _width << " x " << _height << std::endl;
+    stream << "\t Number components " << _numComponents << std::endl;
+    stream << "\t Pixel array size " << _pixelArraySize << std::endl;
+    stream << "\t Color depth " << _colorDepth << std::endl;
+    LOG_INFO_ARGS("Image details %s", stream.str().c_str());
+
+    END();
+}
+
+
+/**
+ * @brief Image::getPixelArraySize
+ * @return
+ */
+int Image::getPixelArraySize(void) const { return _pixelArraySize; }
 
 /**
  * @brief Image::~Image
  */
 Image::~Image()
 {
-    BEGIN();
 
-    delete [] _pixels;
-
-    END();
 }
 
